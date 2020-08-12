@@ -8,7 +8,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -16,52 +15,65 @@ import java.util.List;
  * item.
  */
 public final class GroceryDataReader {
-  private static final Store NO_STORE = Store.NO_STORE;
-  private static final List<Store> stores =
-      new ArrayList<>(
-          Arrays.asList(Store.ALDI, Store.KROGER, Store.TRADER_JOES, Store.PUBLIX, Store.WALMART));
-  private static final ImmutableList<Store> STORES = ImmutableList.copyOf(stores);
+  private static final ImmutableList<Store> STORES =
+      ImmutableList.of(Store.ALDI, Store.KROGER, Store.TRADER_JOES, Store.PUBLIX, Store.WALMART);
 
   /**
    * Finds the specified product in the file and puts the data into DealItem objects to be handled.
    */
-  public DealItem readFile(String itemName) throws IOException {
+  public DealItem readFile(String itemName, String itemPrice) throws IOException {
     URL csvResource = getClass().getClassLoader().getResource("grocerydata.csv");
     File groceryDataFile = new File(csvResource.getFile());
+    double price = (double) Double.parseDouble(itemPrice);
 
     CSVReader reader = new CSVReader(new FileReader(groceryDataFile), ',');
     DealItem cheapestItem = null;
 
     // Should never be null with file grocerydatareader.csv.
     String[] record = null;
-    record = reader.readNext();
-    record = reader.readNext();
+
+    String item = "";
+    try {
+      GroceryNameProcessor processor = new GroceryNameProcessor();
+      item = processor.process(itemName);
+    } catch (Exception e) {
+      item = itemName;
+    }
+
+    String expirationTime = ShelfDataReader.readFile(itemName);
 
     while ((record = reader.readNext()) != null) {
-      if (record[0].equals(itemName)) {
+      if (record[0].equals(item.toLowerCase())) {
         List<DealItem> dealItems = new ArrayList<DealItem>();
-
         for (int i = 0; i < STORES.size(); i++) {
-          /**
-           * Each store has 3 columns of data, so if i is the store number, the starting index of
-           * the data is i*3.
-           */
+          // Each store has 3 columns of data, so if i is the store number, the starting index of
+          // the data is i*3.
           int storeDataStartColumn = i * 3;
-          DealItem item = new DealItem();
-          item.setStore(STORES.get(i));
-          item.setPrice(record[storeDataStartColumn + 1]);
-          item.setWeight(record[storeDataStartColumn + 2]);
-          item.setComment(record[storeDataStartColumn + 3]);
-          dealItems.add(item);
+          DealItem dealItem = new DealItem();
+          dealItem.setStore(STORES.get(i));
+          dealItem.setPrice(record[storeDataStartColumn + 1]);
+          dealItem.setWeight(record[storeDataStartColumn + 2]);
+          dealItem.setComment(record[storeDataStartColumn + 3]);
+          if (expirationTime.isEmpty()) {
+            dealItem.setExpirationTime("NO_EXPIRATION");
+          } else {
+            dealItem.setExpirationTime(expirationTime);
+          }
+          dealItems.add(dealItem);
         }
 
         cheapestItem = getCheapestItemPerUnit(dealItems);
       }
     }
     reader.close();
-    if (cheapestItem == null) {
+    if (cheapestItem == null || cheapestItem.getPrice() > price) {
       cheapestItem = new DealItem();
-      cheapestItem.setStore(NO_STORE);
+      cheapestItem.setStore(Store.NO_STORE);
+      if (expirationTime.isEmpty()) {
+        cheapestItem.setExpirationTime("NO_EXPIRATION");
+      } else {
+        cheapestItem.setExpirationTime(expirationTime);
+      }
     }
     return cheapestItem;
   }

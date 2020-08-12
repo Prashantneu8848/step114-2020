@@ -1,10 +1,8 @@
-import React from 'react';
-import {mount} from 'enzyme';
 import {enableFetchMocks} from 'jest-fetch-mock';
 enableFetchMocks();
-
+import React from 'react';
+import {mount} from 'enzyme';
 import App from './App';
-
 import './setupTests.js';
 
 let component;
@@ -23,6 +21,16 @@ describe('App component', () => {
     expect(component.exists()).toBe(true);
   });
 
+  test('has showSearchResults state false', () => {
+    expect(component.state('showSearchResults')).toBe(false);
+  });
+
+  test('has showSearchResults state true when button is clicked', () => {
+    const showSearchResultButton = component.find('Button');
+    showSearchResultButton.simulate('click');
+    expect(component.state('showSearchResults')).toBe(true);
+  });
+
   // Checks TopNavbar is in App.
   test('contains TopNavbar component', () => {
     const topNavBar = component.find('TopNavbar');
@@ -30,9 +38,9 @@ describe('App component', () => {
   });
 
   // Checks ReceiptInput is in App.
-  test('contains ReceiptInput component', () => {
-    const ReceiptInput = component.find('ReceiptInput');
-    expect(ReceiptInput.exists()).toBe(true);
+  test('contains ReceiptHandler component', () => {
+    const ReceiptHandler = component.find('ReceiptHandler');
+    expect(ReceiptHandler.exists()).toBe(true);
   });
 
   // Checks Background image is in App.
